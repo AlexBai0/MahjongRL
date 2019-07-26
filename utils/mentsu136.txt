@@ -1,0 +1,95 @@
+	union{
+		struct{ // 順子
+			WORD kui:2;
+			WORD syuntsu:1; // 1
+			WORD hai0:2;
+			WORD hai1:2;
+			WORD hai2:2;
+			WORD __padding__:1;
+			WORD type6:6; // 21*3=63(0x3F)
+			/*
+			(0) 01 ２３①
+			(1) 02 ２①３
+			(2) 03 ①２３
+			(3) 11 １３②
+			(4) 12 １②３
+			(5) 13 ②１３
+			(6) 21 １２③
+			(7) 22 １③２
+			(8) 23 ③１２
+			*/
+		};
+		struct{ // 刻子
+			WORD kui:2;
+			WORD syuntsu:1; // 0
+			WORD koutsu:1; // 1
+			WORD chakan:1; // 0
+			WORD hai_unused:2;
+			WORD __padding__:2;
+			WORD type7:7; // 34*3=102(0x66)
+			/*
+			(0) 01 ２３①
+			(1) 02 ２①３
+			(2) 03 ①２３
+			(3) 11 １３②
+			(4) 12 １②３
+			(5) 13 ②１３
+			(6) 21 １２③
+			(7) 22 １③２
+			(8) 23 ③１２
+			*/
+		};
+		struct{ // 槓子
+			WORD kui:2;
+			WORD syuntsu:1; // 0
+			WORD koutsu:1; // 0
+			WORD chakan:1; // 0
+			WORD nuki:1; // 0
+			WORD __padding__:2;
+			WORD type8:8; // 136(0x88)
+			/*
+			(0) 01 ２３４①
+			(1) 02 ２３①４
+			(2) 03 ①２３４
+			(3) 11 １３４②
+			(4) 12 １３②４
+			(5) 13 ②１３４
+			(6) 21 １２４③
+			(7) 22 １２③４
+			(8) 23 ③１２４
+			(9) 31 １２３④
+			(A) 32 １２④３
+			(B) 33 ④１２３
+			*/
+		};
+		struct{ // 加カン -> 刻子から
+			WORD kui:2;
+			WORD syuntsu:1; // 0
+			WORD koutsu:1; // 0
+			WORD chakan:1; // 1
+			WORD hai_added:2;
+			WORD __padding__:2;
+			WORD type7:7; // 34*3=102(0x66)
+			/*
+			(0) 01 ２３①
+			(1) 02 ２①３
+			(2) 03 ①２３
+			(3) 11 １３②
+			(4) 12 １②３
+			(5) 13 ②１３
+			(6) 21 １２③
+			(7) 22 １③２
+			(8) 23 ③１２
+			*/
+		};
+		struct{ // 抜き
+			WORD kui:2; // 0
+			WORD syuntsu:1; // 0
+			WORD koutsu:1; // 0
+			WORD chakan:1; // 0
+			WORD nuki:1; // 1
+			WORD __padding__:2;
+			WORD type8:8; // 136(0x88)
+		};
+		WORD all;
+	};

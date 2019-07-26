@@ -1,5 +1,5 @@
 import gym
-from gym import error,spaces,utils
+from gym import error,spaces,utils,Env
 from gym.utils import seeding
 from gym_mahjong.envs.player import Player
 from copy import copy
@@ -7,7 +7,8 @@ import numpy as np
 import random
 
 
-class MahjongEnv(gym.envs):
+class MahjongEnv(gym.Env):
+    metadata = {'render.modes':['human']}
     """"
     Action space is a tuple of :
     the players discarding options (1-34),
@@ -16,35 +17,37 @@ class MahjongEnv(gym.envs):
     All tiles are represented as a number from 0-33
     """
     def __init__(self,player_seat = 0,opponents = 'random'):
-        self.player = Player(0,False)
+        self.player = Player(player_seat,False)
         self.opponents = [Player(1,True),Player(2,True),Player(3,True)]
         self.players = [self.player].extend(self.opponents)
 
-        # Action include 34 kinds of hand cards, call chi(3) ,  pon,kakan ,kan,riichi, and ron
+        # Action include 34 kinds of hand cards, call chi(3) ,  pon,kakan ,kan,riichi, and ron, and pass
         # 0-33 tile number , 34-38 call riichi, chi ,pon, kan and ron
-        self.action_space = spaces.Discrete(34+8)
+        self.action_space = spaces.Discrete(34+8+1)
 
         # Agent's observation of the game state
         self.observation_space = spaces.Tuple([
-            spaces.Tuple( # self player
+            spaces.Tuple( [# self player
                 spaces.Box(low=0,high=34,shape=(1,34),dtype=np.int) ,   #self hand
                 spaces.Box(low=0,high=34,shape=(1,34),dtype=np.int),    #self discarded
                 spaces.Box(low=0,high=34,shape=(1,34,3),dtype=np.int),  #self called melds
                 spaces.Discrete(1)                                                     #self riichi state
-            ),
+            ]),
             spaces.Tuple([ # opponents
-                spaces.Box(low=0, high=34, shape=(1, 34), dtype=np.int),  # opponent discarded
+                             # spaces.Box(low=0, high=34, shape=(1, 34), dtype=np.int),  # opponent hand
+                             spaces.Box(low=0, high=34, shape=(1, 34), dtype=np.int),  # opponent discarded
                 spaces.Box(low=0, high=34, shape=(1, 34, 3), dtype=np.int),  # opponent called melds
                 spaces.Discrete(1)                                                          # opponent riichi state
             ]*3),
             # round informations
             spaces.Box(low=0, high=34, shape=(1, 34), dtype=np.int),  # dora indicators
-            spaces.Discrete(1)                                                       # round wind
+            spaces.Discrete(1),                                                       # round wind
+            # spaces.Box(low=0, high=136, shape=(1,136),dtype=np.int)  #deck
         ])
 
         self.seed()
         self.reset()
-        print(self.seed())
+
 
     def seed(self,seed = None):
         self.np_random, seed = seeding.np_random(seed)
@@ -60,10 +63,18 @@ class MahjongEnv(gym.envs):
         """
         # Validate action
         assert (self.action_space.contains(action))
+        # Game is finished
         if self.finish:
-            return self.state,0.,True
+            return self.state,0.,True,self.state
+
+        #
 
         # TODO
+
+    def deal(self):
+        self.turn
+    #     TODO
+
     def possibleActions(self,player_seat,state):
         actions=[]
         if self.latest_discard:
@@ -81,6 +92,12 @@ class MahjongEnv(gym.envs):
                         if self.players[player_seat].hand[t]>0:
                             actions.append(t)
         return actions
+
+    def randomActions(self,player_seat,state):
+        if len(self.possibleActions(player_seat,state) ==0):
+            return 'Pass'
+        else:
+            return np.random.choice(self.possibleActions(player_seat,state))
 
     def reset(self):
         """

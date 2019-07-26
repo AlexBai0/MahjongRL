@@ -12,8 +12,8 @@ class State_tran():
         self.hands = []
         self.steps = []
         self.dora_indicator = []
-        # self.initDora()
-        # self.initHand()
+        self.initDora()
+        self.initHand()
         self.initSteps()
         # self.write(path)
 
@@ -135,6 +135,13 @@ class State_tran():
             elif tag[0] == 'R':
                 self.steps.append(['DRAW'])
 
+    def toState(self):
+        """
+        Output a state for MahjongEnv
+        :return: [players], deck, remaining,[dora indicator]
+        """
+        return
+    # TODO
 
     def tagToMelds(self,tag):
         mentsu =int(re.findall('m="(.+?)"',tag)[0])
@@ -167,11 +174,16 @@ class State_tran():
             n = pattern % 9 + 1
             return [6, fromwho, num, suit, n]
 
-def main():
-    state_tran = State_tran('converted/mjlog_pf4-20_n11/2013012805gm-00c1-0000-12155f14&tw=3/5.txt')
-    # state_tran.initSteps()
-    # print(re.findall(r'<(.+?)/>',state_tran.txt))
-    # print(state_tran.steps)
-    # print(state_tran.hands)
-    print(state_tran.steps)
-main()
+
+
+
+
+# Test
+# def main():
+#     state_tran = State_tran('converted/mjlog_pf4-20_n11/2013012805gm-00c1-0000-12155f14&tw=3/5.txt')
+#     # state_tran.initSteps()
+#     # print(re.findall(r'<(.+?)/>',state_tran.txt))
+#     # print(state_tran.steps)
+#     # print(state_tran.hands)
+#     print(state_tran.steps)
+# main()
