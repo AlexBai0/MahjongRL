@@ -15,10 +15,17 @@ class Player(object):
         self.lastDraw = None
         self.riichi = False
 
-    def initHand(self,hand):
+    def initHand136(self,hand):
         for t136 in hand:
             t34 = convert(t136)
             self.hand[t34] +=1
+
+    def initHand34(self,hand):
+        for t34 in hand:
+            self.hand[t34] +=1
+
+    def callRiichi(self):
+        self.riichi = True
 
     def draw(self,tile):
         t34 = convert(tile)

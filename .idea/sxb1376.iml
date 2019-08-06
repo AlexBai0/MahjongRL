@@ -7,7 +7,7 @@
       <excludeFolder url="file://$MODULE_DIR$/gym_chess" />
       <excludeFolder url="file://$MODULE_DIR$/holdem" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="Python 3.7 (mahjongAI)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="tenhou-python-bot-0.4.0" />
   </component>
