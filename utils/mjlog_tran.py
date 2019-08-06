@@ -46,25 +46,19 @@ utils|
       |[mjlogs]                          |[game directory]
                                             |[round files]
 '''
-def main():
-        mjlog_directoris = os.fsencode("./mjlogs/")
-        for player in os.listdir(mjlog_directoris):
-            folder = mjlog_directoris + os.fsencode(player+b"/")
-            new_folder = "./converted/"+ player.decode("utf-8")
-            print(folder)
-            if not os.path.exists(new_folder):
-                os.mkdir(new_folder)
+mjlog_directoris = os.fsencode("./mjlogs/")
+for player in os.listdir(mjlog_directoris):
+    folder = mjlog_directoris + os.fsencode(player+b"/")
+    new_folder = "./converted/"+ player.decode("utf-8")
+    print(folder)
+    if not os.path.exists(new_folder):
+        os.mkdir(new_folder)
 
-            for game in os.listdir(folder):
-                folder_name = "./converted/"+player.decode("utf-8")+"/"+game.decode("utf-8")
-                if not os.path.exists(folder_name):
-                    os.mkdir(folder_name)
-                mjlog = Mjlogtran(folder.decode("utf-8")+"/"+game.decode("utf-8"))
-                mjlog.writeRounds(folder_name)
-                mjlog.reset()
-                print("Done "+folder_name)
-
-main()
-
-
-
+    for game in os.listdir(folder):
+        folder_name = "./converted/"+player.decode("utf-8")+"/"+game.decode("utf-8")
+        if not os.path.exists(folder_name):
+            os.mkdir(folder_name)
+        mjlog = Mjlogtran(folder.decode("utf-8")+"/"+game.decode("utf-8"))
+        mjlog.writeRounds(folder_name)
+        mjlog.reset()
+        print("Done "+folder_name)
