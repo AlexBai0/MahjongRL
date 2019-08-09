@@ -14,6 +14,10 @@ class Player(object):
         self.melds = np.zeros((34,3),int)
         self.lastDraw = None
         self.riichi = False
+        self.calshanten = Shanten()
+
+    def shanten(self):
+        return self.calshanten.calculate_shanten(self.hand)
 
     def initHand136(self,hand):
         for t136 in hand:
