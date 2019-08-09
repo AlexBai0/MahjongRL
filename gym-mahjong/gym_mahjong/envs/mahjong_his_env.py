@@ -7,6 +7,7 @@ import numpy as np
 from utils.state_tran import State_tran
 import os
 import random
+from mahjong.shanten import Shanten
 
 class MahjongEnv(gym.Env):
     metadata = {'render.modes':['human']}
@@ -21,7 +22,7 @@ class MahjongEnv(gym.Env):
         self.gamelog = gamelog_path
         self.player = Player(0,False)
         self.opponents = [Player(1,True),Player(2,True),Player(3,True)]
-        self.players = [self.player].extend(self.opponents)
+        self.players = None
 
         # Action include 34 kinds of hand cards
         # 0-33 tile number
@@ -62,58 +63,92 @@ class MahjongEnv(gym.Env):
         """
         # Validate action
         assert (self.action_space.contains(action))
-        # Game is finished
+        # Episode is finished
         if self.finish:
-            return self.state,0.,True,self.state
-
-        # Step one move
+            return self.state,0.,True
         s = self.steps[self.current_step]
+        # Step until player's discarding
+        while s[0] > 0 or (s[0] == 0 and s[1] == 0):
+            self.playermove()
+            s = self.steps[self.current_step]
+            # Episode is finished by opponents
+            if self.finish:
+                return self.state, 0., True
         # Draw and discard
         # s[0] = player_number
         # s[1] = move type 0 draw, 1 discard
         # s[2] = card number
-        #
-        if s[1]>2:
-            self.finish = True
-            return self.state,
-        # TODO
+        is_playermove = 0
+        called = 0
+        next_s = self.steps[self.current_step+1]
+        if s[0] == 0 and s[1] == 1:  # Player discarding, possible move
+            if action == convert(s[2]): # Move validated as the same as real player, good
+                self.playerdiscard(action)
+                is_playermove = 1
+                shanten = Shanten().calculate_shanten(self.state['Players'][0][0]) # Calculate the distance from winning
+                shanten_prv = Shanten().calculate_shanten(self.state['Previous'][0][0][0]) # Calculate previous distance
+                if next_s[1] > 1 and next_s[0] == 0: #Discarded get called, bad
+                    called = 1
+                return self.state,self.cal_reward(shanten,shanten_prv,is_playermove,called),False
+            else: # unexpected move, finish
+                self.playerdiscard(action)
+                self.finish = True
+                shanten = Shanten().calculate_shanten(self.state['Players'][0][0]) # Calculate the distance from winning
+                shanten_prv = Shanten().calculate_shanten(self.state['Previous'][0][0][0]) # Calculate previous distance
+                return self.state,self.cal_reward(shanten,shanten_prv,is_playermove,called),True
 
-    def deal(self):
-        if self.remaining == 14:
-            self.finish = True
-        else:
-            self.remaining -=1
-            return self.deck[self.remaining]
-    #     TODO
+    def cal_reward(self,shanten,shanten_prv,playermove,called):
+        impro = shanten_prv - shanten  # Improvement of hand, larger the better, -1, 0, 1
+        return 3 * impro - shanten - playermove*called + playermove*0.2
 
-    def possibleActions(self,player_seat,state):
+    def possibleActions(self,state):
         actions=[]
-        #
-        # if self.latest_discard:
-        #     if self.players[player_seat].canChi(self.latest_discard)[0]:
-        #         actions.extend(self.players[player_seat].canChi(self.latest_discard)[1])
-        #     if self.players[player_seat].canPon(self.latest_discard):
-        #         actions.append(37)
-        #     if self.players[player_seat].canKan(self.latest_discard):
-        #         actions.append(39)
-        #     if self.turn ==player_seat:
-        #         if self.players[player_seat].canR(self.latest_discard)[0]:
-        #             actions.append(self.players[player_seat].canR(self.latest_discard)[1])
-        #         else:
-        #             for t in range(34):
-        #                 if self.players[player_seat].hand[t]>0:
-        #                     actions.append(t)
         for a in range(34):
-            if self.players[player_seat].hand[a]>0:
+            if state['Players'][0][0][a]>0:
                 actions.append(a)
-
         return actions
 
-    def randomActions(self,player_seat,state):
-        if len(self.possibleActions(player_seat,state)) ==0:
-            return 'Pass'
-        else:
-            return np.random.choice(self.possibleActions(player_seat,state))
+    def playerdiscard(self,action):
+        """
+        Discard, and update state
+        :param action: action of player
+        :return:
+        """
+        self.state['Previous'] = [copy(self.state['Players']),copy(self.state['Round'])]
+        self.player.discard(action)
+        self.update()
+
+    def playermove(self):
+        """
+        Moves doesn't affect learning
+        :return:
+        """
+        s = self.steps[self.current_step]
+        if s[0] == 0: #Player move
+            if s[1] == 0: #Draw
+                self.player.draw(s[2])
+        elif s[1] == 0: # Opponents draw
+            self.players[s[0]].draw(s[2])
+        elif s[1] == 1: # Opponents discard
+            self.players[s[0]].discard(convert(s[2]))
+        elif s[1] > 1: # Opponents call, episode finish
+            self.finish = True
+        self.current_step+=1
+        self.update()
+
+    def update(self):
+        self.state['Players']=[
+        [self.player.hand,self.player.discarded,self.player.riichi]
+            ]
+        for op in self.opponents:
+            self.state['Players'].append([op.discarded,op.riichi])
+        self.state['Round']=[self.dora_indicators]
+
+    # def randomActions(self,player_seat,state):
+    #     if len(self.possibleActions(player_seat,state)) ==0:
+    #         return 'Pass'
+    #     else:
+    #         return np.random.choice(self.possibleActions(player_seat,state))
 
     def reset(self):
         """
@@ -125,6 +160,7 @@ class MahjongEnv(gym.Env):
         self.player = state_tran.players[0]
         for i in range(3):
             self.opponents[i] = state_tran.players[i+1]
+        self.players=[self.player].extend(self.opponents)
         self.steps = state_tran.steps
         self.current_step = 0
         self.dora_indicators = state_tran.dora_indicators
