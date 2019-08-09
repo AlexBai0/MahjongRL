@@ -87,7 +87,6 @@ class State_tran():
         seed = seedtxt[0]
         self.dora_indicators.append(int(int(seed[5])/4))
         self.wind = int(int(seed[0])/4)
-        print(self.dora_indicators)
 
     # def initDraws(self):
     #     draws = []
@@ -149,7 +148,6 @@ class State_tran():
                 else:
                     call[1] = int(tag[7])
                 call.insert(0,int(tag[7]))
-                print(call)
                 self.steps.append(call)
             elif tag[0]=='A':
                 who = re.search('who="(.+?)"',tag).group(1)
