@@ -66,6 +66,10 @@ class MahjongEnv(gym.Env):
         # Episode is finished
         if self.finish:
             return self.state,0.,True
+        # Action is not a possible move
+        if action not in self.possibleActions(self.state):
+            return self.state,0.,False
+
         s = self.steps[self.current_step]
         # Step until player's discarding
         while s[0] > 0 or (s[0] == 0 and s[1] == 0):
