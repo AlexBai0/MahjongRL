@@ -22,31 +22,31 @@ class MahjongEnv(gym.Env):
         self.gamelog = gamelog_path
         self.player = Player(0,False)
         self.opponents = [Player(1,True),Player(2,True),Player(3,True)]
-        self.players = None
+        self.players = []
 
         # Action include 34 kinds of hand cards
         # 0-33 tile number
-        self.action_space = spaces.Discrete(34)
+        self.action_space = 34
 
         # Agent's observation of the game state
-        self.observation_space = spaces.Tuple([
-            spaces.Tuple( [# self player
-                spaces.Box(low=0,high=34,shape=(1,34),dtype=np.int) ,   #self hand
-                spaces.Box(low=0,high=34,shape=(1,34),dtype=np.int),    #self discarded
-                spaces.Discrete(1)                                      #self riichi state
-            ]),
-            spaces.Tuple([ # opponents
-                spaces.Box(low=0, high=34, shape=(1, 34), dtype=np.int),  # opponent discarded
-                spaces.Discrete(1)                                        # opponent riichi state
-            ]*3),
-            # round informations
-            spaces.Box(low=0, high=34, shape=(1, 34), dtype=np.int),  # dora indicators
-            spaces.Discrete(1),                                                       # round wind
-            # spaces.Box(low=0, high=136, shape=(1,136),dtype=np.int)  #deck
-        ])
-
+        # self.observation_space = spaces.Tuple([
+        #     spaces.Tuple( [# self player
+        #         spaces.Box(low=0,high=34,shape=(1,34),dtype=np.int) ,   #self hand
+        #         spaces.Box(low=0,high=34,shape=(1,34),dtype=np.int),    #self discarded
+        #         spaces.Discrete(1)                                      #self riichi state
+        #     ]),
+        #     spaces.Tuple([ # opponents
+        #         spaces.Box(low=0, high=34, shape=(1, 34), dtype=np.int),  # opponent discarded
+        #         spaces.Discrete(1)                                        # opponent riichi state
+        #     ]*3),
+        #     # round informations
+        #     spaces.Box(low=0, high=34, shape=(1, 34), dtype=np.int),  # dora indicators
+        #     spaces.Discrete(1),                                                       # round wind
+        #     # spaces.Box(low=0, high=136, shape=(1,136),dtype=np.int)  #deck
+        # ])
+        self.observation_space = 170
         self.seed()
-        self.reset()
+        self.reset_()
 
 
     def seed(self,seed = None):
@@ -61,23 +61,24 @@ class MahjongEnv(gym.Env):
         :param action: an action of the agent player
         :return: observation of the game state, reward of the action, whether the episode is ended
         """
-        # Validate action
-        assert (self.action_space.contains(action))
         # Episode is finished
         if self.finish:
-            return self.state,0.,True
+            return self.toReturn(self.state),0.,True
         # Action is not a possible move
         if action not in self.possibleActions(self.state):
-            return self.state,0.,False
+            return self.toReturn(self.state),0.,False
+
 
         s = self.steps[self.current_step]
         # Step until player's discarding
         while s[0] > 0 or (s[0] == 0 and s[1] == 0):
             self.playermove()
+            if self.current_step >= len(self.steps):
+                return self.toReturn(self.state), 0., True
             s = self.steps[self.current_step]
             # Episode is finished by opponents
             if self.finish:
-                return self.state, 0., True
+                return self.toReturn(self.state), 0., True
         # Draw and discard
         # s[0] = player_number
         # s[1] = move type 0 draw, 1 discard
@@ -93,17 +94,26 @@ class MahjongEnv(gym.Env):
                 shanten_prv = Shanten().calculate_shanten(self.state['Previous'][0][0][0]) # Calculate previous distance
                 if next_s[1] > 1 and next_s[0] == 0: #Discarded get called, bad
                     called = 1
-                return self.state,self.cal_reward(shanten,shanten_prv,is_playermove,called),False
+                return self.toReturn(self.state),self.cal_reward(shanten,shanten_prv,is_playermove,called),False
             else: # unexpected move, finish
                 self.playerdiscard(action)
                 self.finish = True
                 shanten = Shanten().calculate_shanten(self.state['Players'][0][0]) # Calculate the distance from winning
                 shanten_prv = Shanten().calculate_shanten(self.state['Previous'][0][0][0]) # Calculate previous distance
-                return self.state,self.cal_reward(shanten,shanten_prv,is_playermove,called),True
+                return self.toReturn(self.state),self.cal_reward(shanten,shanten_prv,is_playermove,called),True
+
+        return self.toReturn(self.state),0.,True
 
     def cal_reward(self,shanten,shanten_prv,playermove,called):
         impro = shanten_prv - shanten  # Improvement of hand, larger the better, -1, 0, 1
-        return 3 * impro - shanten - playermove*called + playermove*0.2
+        # return 3 * impro - shanten - playermove*called + playermove*0.2
+        return 6*impro - shanten
+
+    def toReturn(self,state):
+        p = state['Players']
+        ob = np.append(np.append(np.append(np.append(p[0][0],p[0][1]),p[1][0]),p[2][0]),p[3][0])
+        # a = ob.reshape(ob.shape[0],1)
+        return ob.reshape(ob.shape[0],1).T
 
     def possibleActions(self,state):
         actions=[]
@@ -154,7 +164,7 @@ class MahjongEnv(gym.Env):
     #     else:
     #         return np.random.choice(self.possibleActions(player_seat,state))
 
-    def reset(self):
+    def reset_(self):
         """
         Reset the environment to a start state
         :return:  initial observation of the state
@@ -162,9 +172,10 @@ class MahjongEnv(gym.Env):
         file = random.choice(os.listdir(self.gamelog))  # Randomly choose a game to initialize the environment
         state_tran = State_tran(os.path.join(self.gamelog,file))
         self.player = state_tran.players[0]
+        self.players.append(self.player)
         for i in range(3):
             self.opponents[i] = state_tran.players[i+1]
-        self.players=[self.player].extend(self.opponents)
+            self.players.append(self.opponents[i])
         self.steps = state_tran.steps
         self.current_step = 0
         self.dora_indicators = state_tran.dora_indicators
@@ -178,13 +189,13 @@ class MahjongEnv(gym.Env):
         #     self.kans = 0
         #     self.latest_discard = None
         self.state['Players']=[
-        [self.player.hand,self.player.discarded,self.player.riichi]
+        [self.player.hand,self.player.discarded]
             ]
         for op in self.opponents:
-            self.state['Players'].append([op.discarded,op.riichi])
+            self.state['Players'].append([op.discarded])
         self.state['Round']=[self.dora_indicators]
         self.state['Previous'] = [copy(self.state['Players']),copy(self.state['Round'])]
-        return self.state
+        return self.toReturn(self.state)
 
 
     def render(self, mode='human'):

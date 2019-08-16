@@ -111,7 +111,7 @@ class State_tran():
         for tag in re.findall(r'<(.+?)/>',self.txt):
             if tag[0] == 'T':
                 self.steps.append([0,0,int(tag[1:])])
-            elif tag[0] == 'U':
+            elif tag[0] == 'U' and tag[1]!='N':
                 self.steps.append([1,0,int(tag[1:])])
             elif tag[0] == 'V':
                 self.steps.append([2,0,int(tag[1:])])
@@ -161,7 +161,7 @@ class State_tran():
                 ten = [int(t) for t in ten]
                 self.steps.append([who,8,fromwho,machi,ten[0],ten[1],ten[2]])
             elif tag[0] == 'R':
-                self.steps.append(['DRAW'])
+                self.steps.append([3,3,3,3])
 
 
     def tagToMelds(self,tag):
