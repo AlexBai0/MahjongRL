@@ -44,7 +44,7 @@ class MahjongEnv(gym.Env):
         #     spaces.Discrete(1),                                                       # round wind
         #     # spaces.Box(low=0, high=136, shape=(1,136),dtype=np.int)  #deck
         # ])
-        self.observation_space = 170
+        self.observation_space = 34
         self.seed()
         self.reset_()
 
@@ -59,14 +59,15 @@ class MahjongEnv(gym.Env):
         (any player calls, the game ends with a winner or draw),then reset is called
         to reset the environment
         :param action: an action of the agent player
-        :return: observation of the game state, reward of the action, whether the episode is ended
+        :return: observation of the game state, reward of the action, whether the episode is ended, whether the move is validated
+        as real players move
         """
         # Episode is finished
         if self.finish:
-            return self.toReturn(self.state),0.,True
+            return self.toReturn(self.state),0.,True,False
         # Action is not a possible move
         if action not in self.possibleActions(self.state):
-            return self.toReturn(self.state),0.,False
+            return self.toReturn(self.state),0.,False,False
 
 
         s = self.steps[self.current_step]
@@ -74,11 +75,11 @@ class MahjongEnv(gym.Env):
         while s[0] > 0 or (s[0] == 0 and s[1] == 0):
             self.playermove()
             if self.current_step >= len(self.steps):
-                return self.toReturn(self.state), 0., True
+                return self.toReturn(self.state), 0., True,0
             s = self.steps[self.current_step]
             # Episode is finished by opponents
             if self.finish:
-                return self.toReturn(self.state), 0., True
+                return self.toReturn(self.state), 0., True,0
         # Draw and discard
         # s[0] = player_number
         # s[1] = move type 0 draw, 1 discard
@@ -89,30 +90,31 @@ class MahjongEnv(gym.Env):
         if s[0] == 0 and s[1] == 1:  # Player discarding, possible move
             if action == convert(s[2]): # Move validated as the same as real player, good
                 self.playerdiscard(action)
-                is_playermove = 1
+                is_playermove = True
                 shanten = Shanten().calculate_shanten(self.state['Players'][0][0]) # Calculate the distance from winning
                 shanten_prv = Shanten().calculate_shanten(self.state['Previous'][0][0][0]) # Calculate previous distance
                 if next_s[1] > 1 and next_s[0] == 0: #Discarded get called, bad
                     called = 1
-                return self.toReturn(self.state),self.cal_reward(shanten,shanten_prv,is_playermove,called),False
+                return self.toReturn(self.state),self.cal_reward(shanten,shanten_prv,is_playermove,called),False,is_playermove
             else: # unexpected move, finish
                 self.playerdiscard(action)
                 self.finish = True
                 shanten = Shanten().calculate_shanten(self.state['Players'][0][0]) # Calculate the distance from winning
                 shanten_prv = Shanten().calculate_shanten(self.state['Previous'][0][0][0]) # Calculate previous distance
-                return self.toReturn(self.state),self.cal_reward(shanten,shanten_prv,is_playermove,called),True
+                return self.toReturn(self.state),self.cal_reward(shanten,shanten_prv,is_playermove,called),True,is_playermove
 
-        return self.toReturn(self.state),0.,True
+        return self.toReturn(self.state),0.,True,0
 
     def cal_reward(self,shanten,shanten_prv,playermove,called):
         impro = shanten_prv - shanten  # Improvement of hand, larger the better, -1, 0, 1
         # return 3 * impro - shanten - playermove*called + playermove*0.2
-        return 6*impro - shanten
+        return 2*impro+1
 
     def toReturn(self,state):
         p = state['Players']
-        ob = np.append(np.append(np.append(np.append(p[0][0],p[0][1]),p[1][0]),p[2][0]),p[3][0])
+        # ob = np.append(np.append(np.append(np.append(p[0][0],p[0][1]),p[1][0]),p[2][0]),p[3][0])
         # a = ob.reshape(ob.shape[0],1)
+        ob = p[0][0]
         return ob.reshape(ob.shape[0],1).T
 
     def possibleActions(self,state):
