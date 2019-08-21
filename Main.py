@@ -20,7 +20,7 @@ def playermoveGraph(validation,s):
 env = gym.envs.make('Mahjong-v0')
 QL = QLe(env)
 validation = []
-for episode in range(30000):
+for episode in range(3000):
     observation = env.reset_()
     while True:
         action = QL.decision(observation)
@@ -29,7 +29,6 @@ for episode in range(30000):
         validation.append(validate)
         if (episode > 200) and (episode%5 == 0):
             QL.learn()
-            QL.save_model(episode)
             # print('Learned!')
 
         observation = observation_after

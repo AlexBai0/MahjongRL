@@ -7,23 +7,63 @@ from matplotlib import pyplot as plt
 
 
 class Network:
-    def __init__(self,collections,observation,state,actions,number):
+    def __init__(self,collections=None,observation=None,state=None,actions=None,number=None,path = None):
         self.observations = observation
         self.state = state
         self.actions = actions
+        self.number = number
+        self.collections =collections
+        self.path = path
+        if not self.path:
+            self.generate()
+        else:
+            self.load()
+
+        # weights_ini = tf.initializers.random_normal(stddev=0.3)
+        # bias_ini = tf.initializers.constant(value=0.1)
+        # # First layer of nn
+        # weights1 = tf.get_variable(shape=[self.observations, number], collections=collections, initializer=weights_ini,
+        #                            name='weights1')
+        # bias1 = tf.get_variable(shape=[1, number], collections=collections, initializer=bias_ini, name='bias1')
+        # layer1 = tf.nn.relu(tf.matmul(self.state, weights1) + bias1)
+        # #  Second layer of nn
+        # weights2 = tf.get_variable(shape=[number, self.actions], collections=collections, initializer=weights_ini,
+        #                            name='weights2')
+        # bias2 = tf.get_variable(shape=[1, self.actions], collections=collections, initializer=bias_ini,
+        #                         name='bias2')
+        # self.network = tf.matmul(layer1, weights2) + bias2
+
+    def generate(self):
         weights_ini = tf.initializers.random_normal(stddev=0.3)
         bias_ini = tf.initializers.constant(value=0.1)
         # First layer of nn
-        weights1 = tf.get_variable(shape=[self.observations, number], collections=collections, initializer=weights_ini,
+        weights1 = tf.get_variable(shape=[self.observations, self.number], collections=self.collections,
+                                   initializer=weights_ini,
                                    name='weights1')
-        bias1 = tf.get_variable(shape=[1, number], collections=collections, initializer=bias_ini, name='bias1')
+        bias1 = tf.get_variable(shape=[1, self.number], collections=self.collections, initializer=bias_ini, name='bias1')
         layer1 = tf.nn.relu(tf.matmul(self.state, weights1) + bias1)
         #  Second layer of nn
-        weights2 = tf.get_variable(shape=[number, self.actions], collections=collections, initializer=weights_ini,
+        weights2 = tf.get_variable(shape=[self.number, self.actions], collections=self.collections, initializer=weights_ini,
                                    name='weights2')
-        bias2 = tf.get_variable(shape=[1, self.actions], collections=collections, initializer=bias_ini,
+        bias2 = tf.get_variable(shape=[1, self.actions], collections=self.collections, initializer=bias_ini,
                                 name='bias2')
         self.network = tf.matmul(layer1, weights2) + bias2
+
+    def load(self):
+        w1 = tf.Variable([self.observations,self.number],dtype=tf.float32,name='w1')
+        b1 = tf.Variable([1,self.number],dtype=tf.float32,name='b1')
+        w2 = tf.Variable([self.number,self.actions],dtype=tf.float32,name='w2')
+        b2 = tf.Variable([1,self.actions],dtype=tf.float32,name='b2')
+        checkpoint = self.path+'.meta'
+        saver = tf.train.import_meta_graph(checkpoint)
+        with tf.Session() as sess:
+            saver.restore(sess,self.path)
+            sess.run(w1)
+            sess.run(b1)
+            sess.run(w2)
+            sess.run(b2)
+        layer1 = tf.nn.relu(tf.matmul(self.state,w1)+b1)
+        self.network = tf.matmul(layer1,w2)+b2
 
 
 class QLearning:
@@ -52,19 +92,16 @@ class QLearning:
         self.sess.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver()
 
-
-    # TODO
-
     def generate_model(self):
         # evaluate network
-        self.state = tf.placeholder(tf.float32,[None,self.observations])
-        self.target = tf.placeholder(tf.float32,[None,self.actions])
+        self.state = tf.placeholder(tf.float32,[None,self.observations],name='state')
+        self.target = tf.placeholder(tf.float32,[None,self.actions],name='target')
 
         # Store variables in a scope
         with tf.variable_scope('q_nn'):
             variables = ['q_variables',tf.GraphKeys.GLOBAL_VARIABLES]
             self.q_nn = Network(variables,self.observations,self.state,self.actions,15).network
-
+        tf.add_to_collection('saved_network',self.q_nn)
         self.loss = tf.reduce_mean(tf.squared_difference(self.target,self.q_nn))
         self.train = tf.train.RMSPropOptimizer(self.learing_rate).minimize(self.loss)
 
@@ -74,11 +111,10 @@ class QLearning:
             variables_ = ['target_variables',tf.GraphKeys.GLOBAL_VARIABLES]
             self.target_nn = Network(variables_,self.observations,self.state_,self.actions,15).network
 
-    def save_model(self,step):
-        if step%1000 == 0:
-            self.saver.save(self.sess,"model",global_step=step)
+    def save_model(self):
+        if self.current_learn%1000 == 0:
+            self.saver.save(self.sess,"model",global_step=self.current_learn)
             print('model saved')
-
 
     def learn(self):
         if self.current_learn % 300 == 0: # update parameters
@@ -125,7 +161,7 @@ class QLearning:
             self.epsilon += 0.03
         elif self.epsilon >= 0.9:
             self.epsilon =0.9
-
+        self.save_model()
         self.current_learn += 1
 
     # def update(self):
@@ -136,7 +172,6 @@ class QLearning:
     def reshapeOut(self,q):
         for i in range(len(q)):
             q[i] = q[i][0]
-
 
     def toHistory(self,state,action,reward,next_state):
         # actions = np.zeros(34)
