@@ -161,7 +161,7 @@ class QLearning:
             self.epsilon += 0.03
         elif self.epsilon >= 0.9:
             self.epsilon =0.9
-        self.save_model()
+        # self.save_model()
         self.current_learn += 1
 
     # def update(self):

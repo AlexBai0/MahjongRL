@@ -15,7 +15,7 @@ def convert(t136):
 class Connection:
 
     def __init__(self,
-                 # model,
+                 model,
                  host='133.242.10.78',
                  port = 10080,
                  userid = 'NoName'
@@ -23,24 +23,21 @@ class Connection:
         self.host = host
         self.port = port
         self.user = userid
-        self.wake_thread=None
-        # self.model = model
-        # self.state = tf.placeholder(tf.float32,[None,self.observations],name='state')
-        # self.sess = tf.Session()
-        # self.sess.run(tf.global_variables_initializer())
-
-
+        self.ingame = True
+        self.wake_thread = None
+        self.model = model
+        self.sess = tf.Session()
+        self.sess.run(tf.global_variables_initializer())
 
     def connect(self):
         self.socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.socket.connect((self.host,self.port))
-        self.connected = True
         print('Connected')
 
     def play(self):
         # Join table
         self.halt()
-        self.send('<JOIN t="1" />')
+        self.send('<JOIN t="0,1" />')
         self.searchingTable = True
         print('Looking for game')
         while self.searchingTable:
@@ -57,14 +54,12 @@ class Connection:
                     # Entering table
                     self.searchingTable = False
                     seat = re.search('oya="(.+?)"',m).group(1)
-                    game_id = re.search('log="(.+?)"',m).group(1)
-                    link = 'http://tenhou.net/0/?log='+game_id+'&tw='+seat
+                    # game_id = re.search('log="(.+?)"',m).group(1)
+                    # link = 'http://tenhou.net/0/?log='+game_id+'&tw='+seat
                     seat = int(seat)
                     self.ingame = True
                     print('IN TABLE')
-                if 'UN' in m:
-                    self
-                    #TODO
+
                 if 'LN' in m:
                     self.send('<PXR V="1" />')
 
@@ -76,7 +71,7 @@ class Connection:
             message = self.receive()
             for m in message:
                 if '<INIT' in m:
-                    dealer = int(re.search('dealer="(.+?)"',m).group(1))
+                    # dealer = int(re.search('dealer="(.+?)"',m).group(1))
                     hand = re.search('hai="(.+?)"',m).group(1)
                     hand = [int(t) for t in hand.split(',')]
                     self.hand136 = hand
@@ -95,12 +90,11 @@ class Connection:
                     else:
                         tile = int(re.match(r'^<[tefgEFGTUVWD]+\d*',m).group()[2:])
                         self.draw(tile)
-                    self.discarding = tile   # TODO
+                    self.discarding = self.discard()  # TODO
                     # self.discarding = self.discard()
                     self.halt()
                     self.send('<D p="{}"/>'.format(self.discarding))
                     print('Discard: ',self.discarding)
-                    #TODO
                 if '<AGARI' in m or '<RYUUKYOKU' in m:
                     self.halt()
                     self.send('<NEXTREADY />')
@@ -122,14 +116,16 @@ class Connection:
                     print('Ignore')
         self.end()
 
+
+
     def wake(self):
         def ping():
-            while self.connected:
+            while self.ingame:
                 self.send('<Z />')
                 for i in range(30):
-                    if self.connected:
+                    if self.ingame:
                         sleep(0.5)
-        self.wake_thread = Thread(target=ping())
+        self.wake_thread = Thread(target=ping)
         self.wake_thread.start()
 
     def authencate(self):
@@ -214,16 +210,20 @@ class Connection:
         print('End game')
 
     def decision(self):
-        actions = self.sess.run(self.model,feed_dict={self.state:self.hand34})
+        para = self.hand34.reshape(1,34)
+        actions = self.sess.run(self.model.q_nn,feed_dict={self.model.state:para})
         return np.argmax(actions)
 
     def discard(self):
-        todis = [self.decision()*4+j for j in range(4)]
+        dis34 = self.decision()
+        todis = [dis34*4+j for j in range(4)]
+        dis = random.choice(self.hand136)
         for t in self.hand136:
             if any(t == to for to in todis):
-                return t
-        return random.choice(self.hand136)
-
+                dis = t
+        self.hand34[int(dis/4)] -= 1
+        self.hand136.remove(dis)
+        return dis
 
     def draw(self,tile):
         self.hand136.append(tile)
@@ -246,7 +246,7 @@ class Connection:
         m = m.split('\x00')[0:-1]
         for mes in m:
             if mes:
-                print('GET: ',mes)
+                print('Receive: ',mes)
         return m
 
     def halt(self):
