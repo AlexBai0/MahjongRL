@@ -19,20 +19,6 @@ class Network:
         else:
             self.load()
 
-        # weights_ini = tf.initializers.random_normal(stddev=0.3)
-        # bias_ini = tf.initializers.constant(value=0.1)
-        # # First layer of nn
-        # weights1 = tf.get_variable(shape=[self.observations, number], collections=collections, initializer=weights_ini,
-        #                            name='weights1')
-        # bias1 = tf.get_variable(shape=[1, number], collections=collections, initializer=bias_ini, name='bias1')
-        # layer1 = tf.nn.relu(tf.matmul(self.state, weights1) + bias1)
-        # #  Second layer of nn
-        # weights2 = tf.get_variable(shape=[number, self.actions], collections=collections, initializer=weights_ini,
-        #                            name='weights2')
-        # bias2 = tf.get_variable(shape=[1, self.actions], collections=collections, initializer=bias_ini,
-        #                         name='bias2')
-        # self.network = tf.matmul(layer1, weights2) + bias2
-
     def generate(self):
         weights_ini = tf.initializers.random_normal(stddev=0.3)
         bias_ini = tf.initializers.constant(value=0.1)
@@ -89,8 +75,14 @@ class QLearning:
         tpara = tf.get_collection('target_variables')
         self.update = [tf.assign(t, e) for t, e in zip(qpara, tpara)]
 
-        self.sess.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver()
+        self.sess.run(tf.global_variables_initializer())
+        checkpoint = tf.train.get_checkpoint_state("saved_network")
+        if checkpoint and checkpoint.model_checkpoint_path:
+            self.saver.restore(self.sess,checkpoint.model_checkpoint_path)
+            print("Loaded")
+        else:
+            print("No old models")
 
     def generate_model(self):
         # evaluate network
@@ -112,9 +104,7 @@ class QLearning:
             self.target_nn = Network(variables_,self.observations,self.state_,self.actions,15).network
 
     def save_model(self):
-        if self.current_learn%1000 == 0:
-            self.saver.save(self.sess,"model",global_step=self.current_learn)
-            print('model saved')
+        self.saver.save(self.sess, 'saved_network/' + 'model',global_step=self.current_learn)
 
     def learn(self):
         if self.current_learn % 300 == 0: # update parameters
@@ -161,8 +151,10 @@ class QLearning:
             self.epsilon += 0.03
         elif self.epsilon >= 0.9:
             self.epsilon =0.9
-        # self.save_model()
         self.current_learn += 1
+
+        if self.current_learn%10000 == 0:
+            self.save_model()
 
     # def update(self):
     #     qpara = tf.get_collection('q_variables')
@@ -199,22 +191,3 @@ class QLearning:
         print('total history:',self.current_history)
 
 
-# env = gym.envs.make('Mahjong-v0')
-# QL = QLearning(env)
-# for episode in range(300):
-#     observation = env.reset_()
-#     while True:
-#         action = QL.decision(observation)
-#         observation_after, reward, finish = env.step(action)
-#         QL.toHistory(observation,action,reward,observation_after)
-#         if episode>50:
-#             QL.learn()
-#             # print('Learned!')
-#
-#         observation = observation_after
-#
-#         if finish:
-#             break
-#
-# print('done')
-# QL.toGraph()

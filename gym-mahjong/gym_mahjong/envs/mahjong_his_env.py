@@ -103,7 +103,7 @@ class MahjongEnv(gym.Env):
                 shanten_prv = Shanten().calculate_shanten(self.state['Previous'][0][0][0]) # Calculate previous distance
                 return self.toReturn(self.state),self.cal_reward(shanten,shanten_prv,is_playermove,called),True,is_playermove
 
-        return self.toReturn(self.state),0.,True,0
+        return self.toReturn(self.state),-10.,True,0
 
     def cal_reward(self,shanten,shanten_prv,playermove,called):
         impro = shanten_prv - shanten  # Improvement of hand, larger the better, -1, 0, 1
