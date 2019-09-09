@@ -77,7 +77,7 @@ class QLearning:
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())
-        checkpoint = tf.train.get_checkpoint_state("saved_network")
+        checkpoint = tf.train.get_checkpoint_state("/System/Volumes/Data/Users/alexbai/Desktop/Project/MahjongAIagent/sxb1376/saved_network")
         if checkpoint and checkpoint.model_checkpoint_path:
             self.saver.restore(self.sess,checkpoint.model_checkpoint_path)
             print("Loaded")
