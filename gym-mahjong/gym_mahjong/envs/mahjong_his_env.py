@@ -1,3 +1,7 @@
+'''
+A gym environment for mahjong game
+Alex-Bai 7.7.2019
+'''
 import gym
 from gym import error,spaces,utils,Env
 from gym.utils import seeding
@@ -8,6 +12,7 @@ from utils.state_tran import State_tran
 import os
 import random
 from mahjong.shanten import Shanten
+import settings
 
 class MahjongEnv(gym.Env):
     metadata = {'render.modes':['human']}
@@ -18,7 +23,7 @@ class MahjongEnv(gym.Env):
 
     All tiles are represented as a number from 0-33
     """
-    def __init__(self,gamelog_path = '/System/Volumes/Data/Users/alexbai/Desktop/Project/MahjongAIagent/sxb1376/utils/converted/gamelogs'):
+    def __init__(self,gamelog_path = settings.GAMELOG_PATH):
         self.gamelog = gamelog_path
         self.player = Player(0,False)
         self.opponents = [Player(1,True),Player(2,True),Player(3,True)]

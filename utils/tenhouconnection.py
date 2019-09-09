@@ -1,3 +1,7 @@
+'''
+This class was modified from tenhou-python-bot
+https://github.com/MahjongRepository/tenhou-python-bot
+'''
 import socket
 from urllib.parse import quote
 import re
@@ -7,6 +11,7 @@ import random
 import tensorflow as tf
 from threading import Thread
 import _thread
+import settings
 
 
 def convert(t136):
@@ -16,9 +21,9 @@ class Connection:
 
     def __init__(self,
                  model,
-                 host='133.242.10.78',
-                 port = 10080,
-                 userid = 'NoName'
+                 host=settings.HOST,
+                 port = settings.PORT,
+                 userid = settings.USER_ID
                  ):
         self.host = host
         self.port = port
@@ -207,6 +212,7 @@ class Connection:
         self.ingame=False
         self.connected = False
         self.send('<BYE />')
+        self.wake_thread.join()
         print('End game')
 
     def decision(self):

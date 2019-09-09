@@ -1,9 +1,14 @@
+'''
+This part referenced codes from Reinforcement Learning Methods and Tutorials
+https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow
+'''
 import gym
 import numpy as np
 import random
 import tensorflow as tf
 import copy
 from matplotlib import pyplot as plt
+import settings
 
 
 class Network:
@@ -77,7 +82,7 @@ class QLearning:
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())
-        checkpoint = tf.train.get_checkpoint_state("/System/Volumes/Data/Users/alexbai/Desktop/Project/MahjongAIagent/sxb1376/saved_network")
+        checkpoint = tf.train.get_checkpoint_state(settings.NETWORK_PATH)
         if checkpoint and checkpoint.model_checkpoint_path:
             self.saver.restore(self.sess,checkpoint.model_checkpoint_path)
             print("Loaded")
